@@ -1,0 +1,134 @@
+#!/usr/bin/env python
+# vim: tabstop=4 shiftwidth=4 softtabstop=4
+#
+# Copyright 2012 Sina Corporation
+# All Rights Reserved.
+# Author: YuWei Peng <pengyuwei@gmail.com>
+#
+#    Licensed under the Apache License, Version 2.0 (the "License"); you may
+#    not use this file except in compliance with the License. You may obtain
+#    a copy of the License at
+#
+#         http://www.apache.org/licenses/LICENSE-2.0
+#
+#    Unless required by applicable law or agreed to in writing, software
+#    distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+#    WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+#    License for the specific language governing permissions and limitations
+#    under the License.
+import datetime
+import sys
+import time
+import traceback
+
+#from dateutil.relativedelta import relativedelta
+#import zmq
+
+from nova import flags
+from nova import log as logging
+from nova import utils
+
+#from dough import billing
+#    from dough.billing import api
+from dough import context as dough_context
+from dough import db
+from dough import api
+from nova.openstack.common import cfg
+#from dough import exception
+
+utils.default_flagfile(filename='/etc/dough/dough.conf')
+FLAGS = flags.FLAGS
+#logging.setup()
+
+manager_opts = [
+    cfg.StrOpt('resource_name',
+               short='r',
+               default='name1',
+               help='resource_name.'),
+    cfg.StrOpt('purchase',
+               short='p',
+               default='name1',
+               help='purchase.'),
+    cfg.StrOpt('help',
+               short='?',
+               default='',
+               help='help'),
+    ]
+
+FLAGS.register_cli_opts(manager_opts)
+flags.FLAGS(sys.argv)
+
+def show_usage():   
+    print "dough-mansger -n <resource_name>"
+    
+def get_subs(context, param):
+    print "filter: resource_name=", param
+    try:
+        sub = db.subscription_get_byname(context, resource_name=param)
+        subscription_id = sub['id']
+        status = sub['status']
+        tenant_id = sub['project_id']
+        resource_uuid = sub['resource_uuid']
+        created_at = sub['created_at']
+        updated_at = sub['updated_at']
+        expires_at = sub['expires_at']
+        order_unit = sub['product']['order_unit']
+        order_size = sub['product']['order_size']
+        price = sub['product']['price']
+        currency = sub['product']['currency']
+
+        region_name = sub['product']['region']['name']
+        item_name = sub['product']['item']['name']
+        pay_type = sub['product']['payment_type']
+        interval_unit = pay_type['interval_unit']
+        interval_size = pay_type['interval_size']
+        is_prepaid = pay_type['is_prepaid']
+        print '-'*60
+        print "%24s : %s" % ("subscription_id", str(subscription_id))
+        print "%24s : %s" % ("tenant_id", str(tenant_id))
+        print "%24s : %s" % ("expires_at", str(expires_at))
+        print "%24s : %s" % ("price", str(price))
+        print "%24s : %s" % ("region_name", str(region_name))
+        print "%24s : %s" % ("item_name", str(item_name))
+#        print "%24s : %s" % ("pay_type", str(pay_type))
+        print "%24s : %s" % ("created_at", str(created_at))
+    except Exception, e:
+        print Exception, e
+
+def query_report(tenant_id, timestamp_from, timestamp_to):
+    datetime_from = iso8601.parse_date(timestamp_from)
+    datetime_to = iso8601.parse_date(timestamp_to)
+    context = dough_context.get_context(tenant_id=self.tenant_id)
+    data = api.query_report(self.context,
+                        timestamp_from,
+                        timestamp_to)
+    return data
+
+"""
+select id, subscription_id, created_at, quantity from purchases where subscription_id =151 and created_at>"2012-06-03 00:00:00";
+"""
+
+def main():
+    baselen = 2
+    context = dough_context.get_admin_context()
+    if len(sys.argv) == baselen:
+        get_subs(context, sys.argv)
+        return
+    if len(sys.argv) == baselen:
+        if sys.argv[baselen-1] in ['--help', "-h", "?"]:
+            show_usage()
+            return
+            
+    if len(sys.argv) == baselen + 2:
+        param = sys.argv[baselen + 1]
+        if sys.argv[baselen][:2] == '-r':
+            get_subs(context, param)
+    elif len(sys.argv) == baselen + 4:
+        tenant_id = sys.argv[baselen + 1]
+        timestamp_from = sys.argv[baselen + 2]
+        timestamp_to = sys.argv[baselen + 3]
+        print query_report(tenant_id, timestamp_from, timestamp_to)
+    
+    
+if __name__ == '__main__':
+    main()

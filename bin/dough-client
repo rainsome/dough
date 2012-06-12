@@ -1,0 +1,77 @@
+#!/usr/bin/env python
+# vim: tabstop=4 shiftwidth=4 softtabstop=4
+#
+# Copyright 2012 Sina Corporation
+# All Rights Reserved.
+# Author: YuWei Peng <pengyuwei@gmail.com>
+#
+#    Licensed under the Apache License, Version 2.0 (the "License"); you may
+#    not use this file except in compliance with the License. You may obtain
+#    a copy of the License at
+#
+#         http://www.apache.org/licenses/LICENSE-2.0
+#
+#    Unless required by applicable law or agreed to in writing, software
+#    distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+#    WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+#    License for the specific language governing permissions and limitations
+#    under the License.
+
+import sys
+import time
+import ConfigParser
+import json
+import zmq
+from collections import OrderedDict
+from dough.client.dough_client import *
+
+def show_usage():
+    print "usage:"
+    print "\tdough_client"
+    print "\tdough_client <param> <tenant_id> <time_from> [time_to] [period_hours]"
+    print "param:"
+    print "\t  -m   : query_monthly_report"
+    print "\t  -d   : query_report"
+    print "./dough-client -d d8462edac32e4d688ae20d67a51d529f 2012-01-01T00:00:00 2012-07-07T00:00:00 24"
+
+def show_result(data):
+    print data
+    
+def main():
+    if len(sys.argv) == 2:
+        show_usage()
+        return
+    if len(sys.argv) == 3:
+        if sys.argv[2] in ['--help', "-h", "?"]:
+            show_usage()
+            return
+    
+    data = None
+    client = DoughClient()
+    
+    if len(sys.argv) > 6:
+        tenant_id = sys.argv[3]
+        time_from = sys.argv[4]
+        time_to = sys.argv[5]
+        period = sys.argv[6]
+        if sys.argv[2] == '-d':
+           data = client.query_report(tenant_id, time_from, time_to, period)
+        else:
+            pass
+            
+        show_result(data)
+        return
+    elif len(sys.argv) > 5:
+        tenant_id = sys.argv[3]
+        time_from = sys.argv[4]
+        time_to = sys.argv[5]
+        if sys.argv[2] == '-m':
+           data = client.query_monthly_report(tenant_id, time_from, time_to)
+        else:
+            pass
+        show_result(data)
+    else:
+        pass
+    
+if __name__ == '__main__':
+    main()
