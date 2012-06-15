@@ -94,13 +94,16 @@ class DoughClient():
         data = self.invoke(request)
         return data
         
-    def query_report(self, tenant_id, time_from, time_to, period):
+    def query_report(self, tenant_id, time_from, time_to, period,
+                      item_name, resource_name):
         request = STANDARD_PROTOCOL
         request["method"] = "query_report"
         request["args"]["tenant_id"] = tenant_id
         request["args"]["timestamp_from"] = time_from
         request["args"]["timestamp_to"] = time_to
         request["args"]["period"] = period
+        request["args"]["item_name"] = item_name
+        request["args"]["resource_name"] = resource_name
 
         data = self.invoke(request)
         return data

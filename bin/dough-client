@@ -32,10 +32,30 @@ def show_usage():
     print "param:"
     print "\t  -m   : query_monthly_report"
     print "\t  -d   : query_report"
-    print "./dough-client -d d8462edac32e4d688ae20d67a51d529f 2012-01-01T00:00:00 2012-07-07T00:00:00 24"
+    print "./dough-client -d 1adfb274fee24dbd96ea89b57d110fc5 2012-06-01T00:00:00 2012-07-01T00:00:00 days network resource_name"
 
 def show_result(data):
     print data
+
+def show_report(data):
+#    print "ID=", data['data']['id']
+    data = data['data']['default']
+    line_total_sum = 0
+    quantity_sum = 0
+    count = 0
+    
+    rs = OrderedDict(sorted(data.items(), key=lambda t: t[0]))
+    for k, i in rs.iteritems():
+        count += 1
+        print '-' * 60, count
+        print k
+        for kk, ii in i.iteritems():
+            print "\t", kk, ii
+            if kk == 'line_total':
+                line_total_sum += ii
+            elif kk == 'quantity':
+                quantity_sum += ii
+    print "total[", count, "] = ", line_total_sum
     
 def main():
     if len(sys.argv) == 2:
@@ -49,17 +69,21 @@ def main():
     data = None
     client = DoughClient()
     
-    if len(sys.argv) > 6:
+    if len(sys.argv) > 8:
         tenant_id = sys.argv[3]
         time_from = sys.argv[4]
         time_to = sys.argv[5]
         period = sys.argv[6]
+        item_name = sys.argv[7]
+        resource_name = sys.argv[8]
         if sys.argv[2] == '-d':
-           data = client.query_report(tenant_id, time_from, time_to, period)
+           data = client.query_report(tenant_id, time_from, time_to, period,
+                                      item_name, resource_name)
         else:
             pass
             
-        show_result(data)
+        show_report(data)
+    elif len(sys.argv) > 6:
         return
     elif len(sys.argv) > 5:
         tenant_id = sys.argv[3]

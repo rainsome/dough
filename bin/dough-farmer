@@ -29,6 +29,7 @@ if __name__ == '__main__':
     context = dough_context.get_admin_context()
     while True:
         current_time = utils.utcnow()
+        print "-" * 50, str(current_time)
         subscriptions = list()
         _subscriptions = db.subscription_get_all(context)
         for sub in _subscriptions:

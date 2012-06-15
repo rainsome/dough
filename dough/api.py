@@ -214,19 +214,22 @@ def query_monthly_report(context, timestamp_from=None,
             timeframe = find_timeframe(datetime_from,
                                        datetime_to,
                                        purchase['created_at'])
+            monthly_report["id"] = purchase['id']
             region_usage = monthly_report.setdefault(region_name, dict())
             monthly_usage = region_usage.setdefault(timeframe, dict())
             monthly_usage.setdefault(item_name, 0)
             monthly_usage[item_name] += line_total
-#            monthly_usage["id"] = purchase['id']
     return {'data': monthly_report}
     
 
-def query_report(context, timestamp_from=None,
-                         timestamp_to=None, period=None, **kwargs):
+def query_report(context, timestamp_from=None, timestamp_to=None, 
+                  period=None, item_name=None, resource_name=None, **kwargs):
     """period='days' or 'hours'"""
-    print "query_report", timestamp_from, timestamp_to
+    print "query_report", timestamp_from, timestamp_to, item_name, resource_name
 #    period = int(period)
+
+    if not period in ['days', 'hours', 'months']:
+        return {'data': None}
     
     def find_timeframe(start_time, end_time, target):
         target_utc = target.replace(tzinfo=UTC_TIMEZONE)
@@ -243,33 +246,71 @@ def query_report(context, timestamp_from=None,
         return current_frame.isoformat()
 
     monthly_report = dict()
+    usage_report = dict()
     datetime_from = iso8601.parse_date(timestamp_from)
     datetime_to = iso8601.parse_date(timestamp_to)
     subscriptions = list()
-    _subscriptions = db.subscription_get_all_by_project(context,
+    _subscriptions = list()
+    
+    __subscriptions = db.subscription_get_all_by_project(context,
                                                         context.project_id)
+    if not __subscriptions:
+        return {'data': None}
+#    print "context.project_id", context.project_id
+    for subscription in __subscriptions:
+#        print subscription['id'], subscription['resource_name'], subscription['product']['item']['name']
+        if subscription['resource_name'] != resource_name:
+            continue
+        elif subscription['product']['item']['name'] != item_name:
+            continue
+        _subscriptions.append(subscription)
+            
     for subscription in _subscriptions:
         subscription_id = subscription['id']
+        resource_uuid = subscription['resource_uuid']
+        resource_name = subscription['resource_name']
+        created_at = subscription['created_at']
+        expires_at = subscription['expires_at']
         region_name = subscription['product']['region']['name']
         item_name = subscription['product']['item']['name']
-        subscriptions.append([subscription_id, region_name, item_name])
-    for subscription_id, region_name, item_name in subscriptions:
+        item_type_name = subscription['product']['item_type']['name']
+        order_unit = subscription['product']['order_unit']
+        order_size = subscription['product']['order_size']
+        price = subscription['product']['price']
+        currency = subscription['product']['currency']
+        subscriptions.append([subscription_id, resource_uuid, resource_name,
+                              created_at, expires_at,
+                              region_name, item_name, item_type_name,
+                              order_unit, order_size, price, currency])
+    for (subscription_id, resource_uuid, resource_name, created_at, expires_at,
+         region_name, item_name, item_type_name,
+         order_unit, order_size, price, currency) in subscriptions:
         purchases = db.purchase_get_all_by_subscription_and_timeframe(context,
                                                             subscription_id,
                                                             datetime_from,
                                                             datetime_to)
         if not purchases:
             continue
+        i = 0
         for purchase in purchases:
             line_total = purchase['line_total']
+            quantity = purchase['quantity']
             timeframe = find_timeframe(datetime_from,
                                        datetime_to,
                                        purchase['created_at'])
-            print subscription_id, purchase['id'], region_name, "-->", timeframe
+#            print timeframe
+            i += 1
+            usage_datum = (resource_uuid, resource_name, item_type_name,
+                           order_unit, order_size, price,
+                           currency, quantity, line_total, 
+                           created_at.isoformat(), expires_at.isoformat())
             region_usage = monthly_report.setdefault(region_name, dict())
             monthly_usage = region_usage.setdefault(timeframe, dict())
-            monthly_usage.setdefault(item_name, 0)
-            monthly_usage[item_name] += line_total
-            monthly_usage["id"] = purchase['id']
+            item = monthly_usage.setdefault(item_name, 0)
+            monthly_usage[item_name] = usage_datum
+            item = monthly_usage.setdefault("quantity", 0)
+            monthly_usage.setdefault("line_total", 0)
+            monthly_usage["quantity"] += quantity
+            monthly_usage["line_total"] += line_total
+        print "total:", i
     return {'data': monthly_report}
-    
