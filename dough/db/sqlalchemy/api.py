@@ -241,6 +241,15 @@ def payment_type_get_by_name(context, payment_type_name):
 
 # products
 
+def subscription_get_byname(context, resource_name):
+    result = model_query(context, models.Subscription).\
+                     filter_by(resource_name=resource_name).\
+                     first()
+    if not result:
+        return None
+    return result
+    
+
 def product_get(context, product_id):
     result = model_query(context, models.Product).\
                      filter_by(id=product_id).\
@@ -352,6 +361,7 @@ def subscription_get_all_by_resource_uuid(context, resource_uuid):
 
 
 def subscription_get_all(context, filters=None):
+    """filters={project_id:1}"""
     filters = filters or dict()
     filters = dict(filter(lambda (x, y): x in ['project_id',
                                                'product_id',

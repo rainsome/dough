@@ -42,6 +42,8 @@ def creating(context, subscription_id, tenant_id, resource_uuid,
             quantity = conn.get_usage(resource_uuid,
                     expires_at - relativedelta(**interval_info),
                     expires_at, order_size)
+            print "creating", tenant_id, subscription_id, \
+                    quantity, order_size, "\033[1;33m", price, "\033[0m"
             charge(context, tenant_id, subscription_id, quantity,
                    order_size, price)
         db.subscription_extend(context, subscription_id,
@@ -67,6 +69,8 @@ def deleting(context, subscription_id, tenant_id, resource_uuid,
             quantity = conn.get_usage(resource_uuid,
                     expires_at - relativedelta(**interval_info),
                     expires_at, order_size)
+            print "deleting", tenant_id, subscription_id, \
+                    quantity, order_size, "\033[1;33m", price, "\033[0m"
             charge(context, tenant_id, subscription_id, quantity,
                    order_size, price)
 
@@ -85,6 +89,8 @@ def verified(context, subscription_id, tenant_id, resource_uuid,
     quantity = conn.get_usage(resource_uuid,
                               expires_at - relativedelta(**interval_info),
                               expires_at, order_size)
+    print "verified", tenant_id, subscription_id, \
+                    quantity, order_size, "\033[1;33m", price, "\033[0m"
     charge(context, tenant_id, subscription_id, quantity, order_size, price)
     db.subscription_extend(context, subscription_id,
                            expires_at + relativedelta(**interval_info))
