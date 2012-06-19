@@ -656,7 +656,7 @@ class DBApiTestCase(unittest.TestCase):
         subscription_ref = db.subscription_create(self.context, values)
         values = {
             'subscription_id': subscription_ref.id,
-            'quantity': 1.56,
+            'quantity': 1,
             'line_total': 1.56 * product_ref.price,
             }
         expect = db.purchase_create(self.context, values)
@@ -700,7 +700,7 @@ class DBApiTestCase(unittest.TestCase):
         subscription_ref = db.subscription_create(self.context, values)
         values = {
             'subscription_id': subscription_ref.id,
-            'quantity': 1.56,
+            'quantity': 1,
             'line_total': 1.56 * product_ref.price,
             }
         expect = db.purchase_create(self.context, values)
@@ -746,7 +746,7 @@ class DBApiTestCase(unittest.TestCase):
         subscription_ref = db.subscription_create(self.context, values)
         values = {
             'subscription_id': subscription_ref.id,
-            'quantity': 1.56,
+            'quantity': 1,
             'line_total': 1.56 * product_ref.price,
             }
         expect = db.purchase_create(self.context, values)

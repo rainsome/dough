@@ -22,7 +22,7 @@ SQLAlchemy models for dough data.
 
 
 from sqlalchemy.orm import relationship, backref
-from sqlalchemy import Column, Integer, String
+from sqlalchemy import Column, Integer, BigInteger, String
 from sqlalchemy import ForeignKey, DateTime, Boolean, Float
 
 from nova.db.sqlalchemy import models
@@ -140,5 +140,5 @@ class Purchase(models.BASE, models.NovaBase):
     subscription_id = Column(Integer,
                              ForeignKey(Subscription.id),
                              nullable=False)
-    quantity = Column(Float, nullable=False)
+    quantity = Column(BigInteger, nullable=False)
     line_total = Column(Float, nullable=False)

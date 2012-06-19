@@ -86,6 +86,7 @@ def unsubscribe_item(context, region=None, item=None,
         subscriptions = db.subscription_get_all_by_resource_uuid(context,
                                                                  resource_uuid)
         if not subscriptions:
+            print "unsubscribe_item.SubscriptionNotFoundByResourceUUID", resource_uuid
             raise exception.SubscriptionNotFoundByResourceUUID(
                     resource_uuid=resource_uuid)
         for subscription in subscriptions:
