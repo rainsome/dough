@@ -137,6 +137,11 @@ def query_usage_report(context, timestamp_from=None,
     _subscriptions = db.subscription_get_all_by_project(context,
                                                         context.project_id)
     for subscription in _subscriptions:
+        if subscription is None \
+           or subscription['product'] is None \
+           or subscription['product']['region'] is None \
+           or subscription['product']['region']['name'] is None:
+            continue
         subscription_id = subscription['id']
         resource_uuid = subscription['resource_uuid']
         resource_name = subscription['resource_name']
@@ -201,6 +206,11 @@ def query_monthly_report(context, timestamp_from=None,
                                                         context.project_id)
     for subscription in _subscriptions:
         subscription_id = subscription['id']
+        if subscription is None \
+           or subscription['product'] is None \
+           or subscription['product']['region'] is None \
+           or subscription['product']['region']['name'] is None:
+            continue
         region_name = subscription['product']['region']['name']
         item_name = subscription['product']['item']['name']
         subscriptions.append([subscription_id, region_name, item_name])
