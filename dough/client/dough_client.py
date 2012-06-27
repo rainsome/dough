@@ -18,14 +18,14 @@
 #    under the License.
 
 import sys
-import time
-from md5 import md5
+#import time
+#from md5 import md5
 import json
 import zmq
-import urllib2
-import datetime
-import base64
-from collections import OrderedDict
+#import urllib2
+#import datetime
+#import base64
+#from collections import OrderedDict
 
 from nova import utils
 from nova import flags
@@ -47,12 +47,20 @@ api_opts = [
 #               default='name1',
 #               help='monthly_report.'),
     ]
-    
+
 cli_opts = [
     cfg.StrOpt('monthly_report',
                short='m',
                default='name1',
                help='monthly_report.'),
+    cfg.StrOpt('subscribe_item',
+               short='s',
+               default='default1',
+               help='subscribe_item.'),
+    cfg.StrOpt('unsubscribe_item',
+               short='u',
+               default='default1',
+               help='unsubscribe_item.'),
     ]
 
 FLAGS = flags.FLAGS
@@ -70,6 +78,7 @@ STANDARD_PROTOCOL = {
         }
     }
 
+
 class DoughClient():
 
     def __init__(self):
@@ -78,12 +87,12 @@ class DoughClient():
         connstr = "tcp://%(api_host)s:%(api_port)s" % FLAGS
     #        print connstr
         self.socket.connect(connstr)
-        
+
     def invoke(self, param):
-        self.socket.send_multipart (["client", "1", json.dumps(param)])
+        self.socket.send_multipart(["client", "1", json.dumps(param)])
         msg_type, uuid, message = self.socket.recv_multipart()
         return json.loads(message)
-    
+
     def query_monthly_report(self, tenant_id, time_from, time_to):
         request = STANDARD_PROTOCOL
         request["method"] = "query_monthly_report"
@@ -93,7 +102,7 @@ class DoughClient():
 
         data = self.invoke(request)
         return data
-        
+
     def query_report(self, tenant_id, time_from, time_to, period,
                       item_name, resource_name):
         request = STANDARD_PROTOCOL
@@ -107,4 +116,36 @@ class DoughClient():
 
         data = self.invoke(request)
         return data
-        
+
+    def subscribe_item(self, user_id, tenant_id,
+                       resource_uuid, resource_name, region, item,
+                       item_type, payment_type, timestamp):
+        request = STANDARD_PROTOCOL
+        request["method"] = "subscribe_item"
+        request["args"]["user_id"] = user_id
+
+        request["args"]["tenant_id"] = tenant_id
+        request["args"]["resource_name"] = resource_name
+        request["args"]["region"] = region
+        request["args"]["resource_uuid"] = resource_uuid
+        request["args"]["item"] = item
+        request["args"]["item_type"] = item_type
+        request["args"]["payment_type"] = payment_type
+        request["args"]["timestamp"] = timestamp
+
+        data = self.invoke(request)
+        return data
+
+    def unsubscribe_item(self, user_id, tenant_id, region, resource_uuid, item, timestamp):
+        request = STANDARD_PROTOCOL
+        request["method"] = "unsubscribe_item"
+
+        request["args"]["user_id"] = user_id
+        request["args"]["tenant_id"] = tenant_id
+        request["args"]["region"] = region
+        request["args"]["resource_uuid"] = resource_uuid
+        request["args"]["item"] = item
+        request["args"]["timestamp"] = timestamp
+
+        data = self.invoke(request)
+        return data

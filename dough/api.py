@@ -6,7 +6,7 @@ from dateutil import tz
 import iso8601
 
 from nova import flags
-from nova import utils
+#from nova import utils
 from nova.openstack.common import cfg
 
 from dough import db
@@ -45,6 +45,7 @@ def _product_get_all(context, region=None, item=None, item_type=None,
         products = db.product_get_all(context, filters=filters)
     except Exception, e:
         # TODO(lzyeval): report
+        print e
         raise
     return products
 
@@ -67,12 +68,16 @@ def subscribe_item(context, region=None, item=None, item_type=None,
                                     payment_type=payment_type)
         # TODO(lzyeval): check if products size is not 1
         values['product_id'] = products[0]['id']
+        values['status'] = "verified"
+        print "subscription_create", values
         subscription_ref = db.subscription_create(context, values)
         db.subscription_extend(context,
                                subscription_ref['id'],
                                subscription_ref['created_at'])
+        print "item subscribed."
     except Exception, e:
         # TODO(lzyeval): report
+        print "subscribe failed:", Exception, e
         raise
     return dict()
 
@@ -90,17 +95,25 @@ def unsubscribe_item(context, region=None, item=None,
             raise exception.SubscriptionNotFoundByResourceUUID(
                     resource_uuid=resource_uuid)
         for subscription in subscriptions:
-            if subscription['product']['region']['name'] != region:
+            product = subscription['product']
+            if product['region']['name'] != region:
                 continue
-            elif subscription['product']['item']['name'] != item:
+            elif product['item']['name'] != item:
+                continue
+            # TODO: status==verified
+            print subscription['status']
+            if "floating_ip" == product['item']['name'] and "verified" != subscription['status']:
                 continue
             subscription_id = subscription['id']
+            break
         if not subscription_id:
+            print "subscription_get_by_resource_uuid", resource_uuid, "item=", item, "region=", region
             raise exception.SubscriptionNotFoundByRegionOrItem(region=region,
                                                                item=item)
         db.subscription_destroy(context, subscription_id)
     except Exception, e:
         # TODO(lzyeval): report
+        print e
         raise
     return dict()
 
@@ -180,6 +193,7 @@ def query_usage_report(context, timestamp_from=None,
         item_usage.append(usage_datum)
     return {'data': usage_report}
 
+
 def query_monthly_report(context, timestamp_from=None,
                          timestamp_to=None, **kwargs):
 
@@ -232,7 +246,8 @@ def query_monthly_report(context, timestamp_from=None,
             monthly_usage[item_name] += line_total
     return {'data': monthly_report}
 
-def query_report(context, timestamp_from=None, timestamp_to=None, 
+
+def query_report(context, timestamp_from=None, timestamp_to=None,
                   period=None, item_name=None, resource_name=None, **kwargs):
     """period='days' or 'hours'"""
     print "query_report", timestamp_from, timestamp_to, item_name, resource_name
@@ -240,7 +255,7 @@ def query_report(context, timestamp_from=None, timestamp_to=None,
 
     if not period in ['days', 'hours', 'months']:
         return {'data': None}
-    
+
     def find_timeframe(start_time, end_time, target):
         target_utc = target.replace(tzinfo=UTC_TIMEZONE)
         current_frame = start_time
@@ -256,12 +271,12 @@ def query_report(context, timestamp_from=None, timestamp_to=None,
         return current_frame.isoformat()
 
     monthly_report = dict()
-    usage_report = dict()
+    #usage_report = dict()
     datetime_from = iso8601.parse_date(timestamp_from)
     datetime_to = iso8601.parse_date(timestamp_to)
     subscriptions = list()
     _subscriptions = list()
-    
+
     __subscriptions = db.subscription_get_all_by_project(context,
                                                         context.project_id)
     if not __subscriptions:
@@ -274,7 +289,7 @@ def query_report(context, timestamp_from=None, timestamp_to=None,
         elif subscription['product']['item']['name'] != item_name:
             continue
         _subscriptions.append(subscription)
-            
+
     for subscription in _subscriptions:
         subscription_id = subscription['id']
         resource_uuid = subscription['resource_uuid']
@@ -312,16 +327,15 @@ def query_report(context, timestamp_from=None, timestamp_to=None,
             i += 1
             usage_datum = (resource_uuid, resource_name, item_type_name,
                            order_unit, order_size, price,
-                           currency, quantity, line_total, 
+                           currency, quantity, line_total,
                            created_at.isoformat(), expires_at.isoformat())
             region_usage = monthly_report.setdefault(region_name, dict())
             monthly_usage = region_usage.setdefault(timeframe, dict())
-            item = monthly_usage.setdefault(item_name, 0)
+            monthly_usage.setdefault(item_name, 0)
             monthly_usage[item_name] = usage_datum
-            item = monthly_usage.setdefault("quantity", 0)
+            monthly_usage.setdefault("quantity", 0)
             monthly_usage.setdefault("line_total", 0)
             monthly_usage["quantity"] += quantity
             monthly_usage["line_total"] += line_total
         print "total:", i
     return {'data': monthly_report}
-    

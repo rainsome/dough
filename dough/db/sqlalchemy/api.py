@@ -248,7 +248,7 @@ def subscription_get_byname(context, resource_name):
     if not result:
         return None
     return result
-    
+
 
 def product_get(context, product_id):
     result = model_query(context, models.Product).\
@@ -365,6 +365,7 @@ def subscription_get_all(context, filters=None):
     filters = filters or dict()
     filters = dict(filter(lambda (x, y): x in ['project_id',
                                                'product_id',
+                                               'status',
                                                'resource_uuid'],
                           filters.items()))
     return model_query(context, models.Subscription).filter_by(**filters).all()
