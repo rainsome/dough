@@ -18,10 +18,6 @@
 #    under the License.
 
 import sys
-#import time
-#import ConfigParser
-#import json
-#import zmq
 from collections import OrderedDict
 from dough.client.dough_client import DoughClient
 
@@ -31,13 +27,18 @@ def show_usage():
     print "\tdough_client"
     print "\tdough_client <param> <tenant_id> <time_from> [time_to] [period_hours]"
     print "param:"
-    print "\t  -m   : query_monthly_report"
-    print "\t  -d   : query_report"
-    print "./dough-client -d 1adfb274fee24dbd96ea89b57d110fc5 2012-06-01T00:00:00 2012-07-01T00:00:00 days network resource_name"
-    print "\t  -u   : unsubscribe_item"
-    print "./dough-client -u user_id, tenant_id, region, resource_uuid, item, timestamp"
-    print "\t  -s   : subscribe_item"
-    print "./dough-client -s user_id tenant_id resource_uuid resource_name region item item_type payment_type timestamp"
+    print "\t  -m : query_monthly_report"
+    print "\t  -d : query_report"
+    print "\t  -u : unsubscribe_item"
+    print "\t  -s : subscribe_item"
+    print "\t  -l : get_load_balancers"
+    print "example:"
+    print "\t./dough-client -s user_id tenant_id resource_uuid resource_name region item item_type payment_type timestamp"
+    print "\t./dough-client -u user_id, tenant_id, region, resource_uuid, item, timestamp"
+    print "\t./dough-client -d 1adfb274fee24dbd96ea89b57d110fc5 2012-06-01T00:00:00 2012-07-01T00:00:00 days network resource_name"
+    print "\tget_all: ./dough-client -l user_id tenant_id"
+    print "\tget_by_uuid: ./dough-client -l user_id tenant_id load_balancer_uuid"
+    print "\tisrunning?: ./dough-client -l load_balancer_uuid"
 
 
 def show_result(data):
@@ -121,15 +122,34 @@ def main():
         show_report(data)
     elif len(sys.argv) > 6:
         return
-    elif len(sys.argv) > 5:
-        tenant_id = sys.argv[3]
-        time_from = sys.argv[4]
-        time_to = sys.argv[5]
-        if sys.argv[2] == '-m':
-            data = client.query_monthly_report(tenant_id, time_from, time_to)
+    elif len(sys.argv) >= 3:
+        if sys.argv[2] == '-l':
+            if len(sys.argv) == 5:
+                user_id = sys.argv[3]
+                tenant_id = sys.argv[4]
+                data = client.load_balancer_get_all(user_id, tenant_id)
+                print data
+            elif len(sys.argv) == 6:
+                user_id = sys.argv[3]
+                tenant_id = sys.argv[4]
+                lb_id = sys.argv[5]
+                data = client.load_balancer_get(user_id, tenant_id, lb_id)
+                print data
+            elif len(sys.argv) == 4:
+                lb_id = sys.argv[3]
+                data = client.load_balancer_is_running(lb_id)
+                print data
+            else:
+                pass
+        elif sys.argv[2] == '-m':
+            if len(sys.argv) == 6:
+                tenant_id = sys.argv[3]
+                time_from = sys.argv[4]
+                time_to = sys.argv[5]
+                data = client.query_monthly_report(tenant_id, time_from, time_to)
+                show_result(data)
         else:
             pass
-        show_result(data)
     else:
         pass
 

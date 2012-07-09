@@ -17,7 +17,6 @@
 #    under the License.
 
 from dateutil.relativedelta import relativedelta
-
 from nova import utils
 
 from dough import db
@@ -26,8 +25,9 @@ from dough.billing import driver
 
 def creating(context, subscription_id, tenant_id, resource_uuid,
              created_at, updated_at, expires_at,
-             order_unit, order_size, price, currency, region_name, 
+             order_unit, order_size, price, currency, region_name,
              item_name, interval_unit, interval_size, is_prepaid):
+    app = context.app
     conn = driver.get_connection(item_name)
     if not conn.is_running(resource_uuid):
         if created_at + relativedelta(minutes=10) < utils.utcnow():
@@ -44,6 +44,7 @@ def creating(context, subscription_id, tenant_id, resource_uuid,
                     expires_at, order_size)
             print "creating", tenant_id, subscription_id, \
                     quantity, order_size, "\033[1;33m", price, "\033[0m"
+            app.info("creating %s:subid=%s,tid=%s,price=%s" % (item_name, subscription_id, tenant_id, str(price)))
             charge(context, tenant_id, subscription_id, quantity,
                    order_size, price)
         db.subscription_extend(context, subscription_id,
@@ -52,8 +53,9 @@ def creating(context, subscription_id, tenant_id, resource_uuid,
 
 def deleting(context, subscription_id, tenant_id, resource_uuid,
              created_at, updated_at, expires_at,
-             order_unit, order_size, price, currency, region_name, 
+             order_unit, order_size, price, currency, region_name,
              item_name, interval_unit, interval_size, is_prepaid):
+    app = context.app
     conn = driver.get_connection(item_name)
     if not conn.is_terminated(resource_uuid):
         if updated_at + relativedelta(minutes=10) < utils.utcnow():
@@ -71,14 +73,16 @@ def deleting(context, subscription_id, tenant_id, resource_uuid,
                     expires_at, order_size)
             print "deleting", tenant_id, subscription_id, \
                     quantity, order_size, "\033[1;33m", price, "\033[0m"
+            app.info("deleting %s:subid=%s,tid=%s,price=%s" % (item_name, subscription_id, tenant_id, str(price)))
             charge(context, tenant_id, subscription_id, quantity,
                    order_size, price)
 
 
 def verified(context, subscription_id, tenant_id, resource_uuid,
              created_at, updated_at, expires_at,
-             order_unit, order_size, price, currency, region_name, 
+             order_unit, order_size, price, currency, region_name,
              item_name, interval_unit, interval_size, is_prepaid):
+    app = context.app
     conn = driver.get_connection(item_name)
     if not conn.is_running(resource_uuid):
         # FIXME(lzyeval): raise Exception()
@@ -91,23 +95,27 @@ def verified(context, subscription_id, tenant_id, resource_uuid,
                               expires_at, order_size)
     print "verified", tenant_id, subscription_id, \
                     quantity, order_size, "\033[1;33m", price, "\033[0m"
+    app.info("verified %s:subid=%s,tid=%s,price=%s" % (item_name, subscription_id, tenant_id, str(price)))
     charge(context, tenant_id, subscription_id, quantity, order_size, price)
     db.subscription_extend(context, subscription_id,
                            expires_at + relativedelta(**interval_info))
 
 
-def error(*args, **kwargs):
+def error(context, *args, **kwargs):
     # TODO(lzyeval): report
+    print "error", args, kwargs
     return
 
 
 def charge(context, tenant_id, subscription_id, quantity, order_size, price):
     if not quantity:
         return
-    line_total = price * quantity / order_size 
+    line_total = price * quantity / order_size
     values = {
         'subscription_id': subscription_id,
         'quantity': quantity,
         'line_total': line_total,
     }
+    print "purchase_create, subid=", subscription_id, values
+    context.app.info("purchase_create:subid=%s, line_total=%s" % (subscription_id, str(line_total)))
     db.purchase_create(context, values)

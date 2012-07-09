@@ -18,14 +18,8 @@
 #    under the License.
 
 import sys
-#import time
-#from md5 import md5
 import json
 import zmq
-#import urllib2
-#import datetime
-#import base64
-#from collections import OrderedDict
 
 from nova import utils
 from nova import flags
@@ -35,6 +29,7 @@ from nova import log as logging
 utils.default_flagfile(filename='/etc/dough/dough.conf')
 logging.setup()
 
+
 api_opts = [
     cfg.StrOpt('api_host',
                default='127.0.0.1',
@@ -42,10 +37,6 @@ api_opts = [
     cfg.IntOpt('api_port',
                default=8783,
                help='Port of dough api.'),
-#    cfg.StrOpt('monthly_report',
-#               short='m',
-#               default='name1',
-#               help='monthly_report.'),
     ]
 
 cli_opts = [
@@ -61,12 +52,18 @@ cli_opts = [
                short='u',
                default='default1',
                help='unsubscribe_item.'),
+    cfg.StrOpt('load_balancer',
+               short='l',
+               default='default1',
+               help='load_balancer.'),
     ]
 
 FLAGS = flags.FLAGS
 FLAGS.register_cli_opts(cli_opts)
 FLAGS.register_opts(api_opts)
 flags.FLAGS(sys.argv)
+
+from dough.billing.driver import load_balancer
 
 STANDARD_PROTOCOL = {
     'method': 'query_report',
@@ -149,3 +146,23 @@ class DoughClient():
 
         data = self.invoke(request)
         return data
+
+    def load_balancer_get_all(self, user_id, tenant_id):
+        data = load_balancer.DEMUX_CLIENT.send({'method': 'get_all_load_balancers',
+                                                'args': {'user_id': user_id,
+                                                         'tenant_id': tenant_id}})
+
+        return data
+
+    def load_balancer_get(self, user_id, tenant_id, lb_id):
+        data = load_balancer.DEMUX_CLIENT.send({'method': 'get_load_balancer',
+                                               'args': {'user_id': user_id,
+                                                        'tenant_id': tenant_id,
+                                                        'load_balancer_uuid': lb_id,
+                                                       }})
+
+        return data
+
+    def load_balancer_is_running(self, uuid):
+        ret = load_balancer.is_running(uuid)
+        return ret

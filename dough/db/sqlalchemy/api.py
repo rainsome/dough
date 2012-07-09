@@ -18,16 +18,14 @@
 
 """Implementation of SQLAlchemy backend."""
 
-import datetime
-
-from sqlalchemy import and_
-from sqlalchemy import or_
-from sqlalchemy.exc import IntegrityError
-from sqlalchemy.orm import joinedload
-from sqlalchemy.orm import joinedload_all
-from sqlalchemy.sql import func
-from sqlalchemy.sql.expression import asc
-from sqlalchemy.sql.expression import desc
+#from sqlalchemy import and_
+#from sqlalchemy import or_
+#from sqlalchemy.exc import IntegrityError
+#from sqlalchemy.orm import joinedload
+#from sqlalchemy.orm import joinedload_all
+#from sqlalchemy.sql import func
+#from sqlalchemy.sql.expression import asc
+#from sqlalchemy.sql.expression import desc
 from sqlalchemy.sql.expression import literal_column
 
 from nova import utils
@@ -288,8 +286,8 @@ def product_get_all(context, filters=None):
                           filters.items()))
     return model_query(context, models.Product).filter_by(**filters).all()
 
-# subscriptions
 
+# subscriptions
 def subscription_get(context, subscription_id):
     result = model_query(context, models.Subscription).\
                      filter_by(id=subscription_id).\
@@ -300,6 +298,7 @@ def subscription_get(context, subscription_id):
 
 
 def subscription_create(context, values):
+    print "subscription_create", values
     subscriptions = subscription_get_all(context, values)
     if subscriptions:
         raise Exception()
