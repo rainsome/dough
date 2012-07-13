@@ -78,4 +78,4 @@ if __name__ == '__main__':
                    order_size, price, currency, region_name,
                    item_name, interval_unit, interval_size, is_prepaid)
 
-        time.sleep(600)
+        time.sleep(60 * 5)

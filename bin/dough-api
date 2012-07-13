@@ -12,6 +12,7 @@ from nova import log as logging
 
 from dough import api
 from dough import context as dough_context
+from kanyun.common.app import App
 
 utils.default_flagfile(filename='/etc/dough/dough.conf')
 flags.FLAGS(sys.argv)
@@ -21,6 +22,7 @@ FLAGS = flags.FLAGS
 
 if __name__ == '__main__':
     zmq_context = zmq.Context()
+    app = App(conf="dough/dough.conf", name="dough-api")
 
     # Socket to receive messages on
     handler = zmq_context.socket(zmq.REP)
@@ -41,7 +43,8 @@ if __name__ == '__main__':
                 method = msg_body['method']
                 args = msg_body['args']
                 context = dough_context.get_context(**args)
-                print "-"*60
+                context.app = app
+                print "-" * 60
                 print "\033[0;31m" + method + "\033[0m:"
                 print args
                 method_func = getattr(api, method)
@@ -50,6 +53,7 @@ if __name__ == '__main__':
                 print response
             except Exception, e:
                 print traceback.format_exc()
+                app.error(method + ": " + str(e))
                 cli_msg['code'] = 500
                 cli_msg['message'] = str(e)
             response.update(cli_msg)
