@@ -30,6 +30,7 @@ def creating(context, subscription_id, tenant_id, resource_uuid,
     app = context.app
     conn = driver.get_connection(item_name)
     if not conn.is_running(resource_uuid):
+        print "creating wait running", tenant_id, subscription_id
         if created_at + relativedelta(minutes=10) < utils.utcnow():
             db.subscription_error(context, subscription_id)
             # TODO(lzyeval): report
@@ -42,7 +43,7 @@ def creating(context, subscription_id, tenant_id, resource_uuid,
             quantity = conn.get_usage(resource_uuid,
                     expires_at - relativedelta(**interval_info),
                     expires_at, order_size)
-            print "creating", tenant_id, subscription_id, \
+            print "creating and is running", tenant_id, subscription_id, \
                     quantity, order_size, "\033[1;33m", price, "\033[0m"
             app.info("creating %s:subid=%s,tid=%s,price=%s" % (item_name, subscription_id, tenant_id, str(price)))
             charge(context, tenant_id, subscription_id, quantity,
@@ -116,6 +117,7 @@ def charge(context, tenant_id, subscription_id, quantity, order_size, price):
         'quantity': quantity,
         'line_total': line_total,
     }
-    print "purchase_create, subid=", subscription_id, values
-    context.app.info("purchase_create:subid=%s, line_total=%s" % (subscription_id, str(line_total)))
+    print "purchase_create, tenant_id=%s, subid=%s" % (tenant_id, subscription_id)
+    print values
+    context.app.info("purchase_create:tenant_id=%s, subid=%s, line_total=%s" % (tenant_id, subscription_id, str(line_total)))
     db.purchase_create(context, values)

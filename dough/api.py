@@ -69,12 +69,13 @@ def subscribe_item(context, region=None, item=None, item_type=None,
         # TODO(lzyeval): check if products size is not 1
         values['product_id'] = products[0]['id']
         values['status'] = "verified"
-        print "subscription_create", values
+        print "subscription_create", item, payment_type, values
         app = context.app
-        app.info("subscribe_item:proj_id=" + \
-                 str(context.project_id) + \
-                 str(resource_name) + \
-                 str(resource_uuid))
+        app.info("subscribe_item:proj_id=" + str(context.project_id) + \
+                " name:" + str(resource_name) + \
+                "/" + str(item) + \
+                "/" + str(payment_type) + \
+                "/" + str(resource_uuid))
         subscription_ref = db.subscription_create(context, values)
         db.subscription_extend(context,
                                subscription_ref['id'],
@@ -117,7 +118,7 @@ def unsubscribe_item(context, region=None, item=None,
             print "subscription_get_by_resource_uuid", resource_uuid, "item=", item, "region=", region
             raise exception.SubscriptionNotFoundByRegionOrItem(region=region,
                                                                item=item)
-        app.info("unsubscribe_item:subs_id=" + str(subscription_id))
+        app.info("\tsubs_id=" + str(subscription_id))
         db.subscription_destroy(context, subscription_id)
     except Exception, e:
         # TODO(lzyeval): report

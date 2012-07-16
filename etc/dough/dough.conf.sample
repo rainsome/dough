@@ -1,3 +1,9 @@
+[dough-api]
+log: /var/log/dough-api.log
+
+[farmer]
+log: /var/log/dough-farmer.log
+
 [DEFAULT]
 sql_connection=mysql://someuser:somepasswd@localhost/dough
 api_listen=localhost

@@ -48,6 +48,8 @@ class Client(object):
         #result = utils.loads(r_msg_body)['msg']
         #if result['code'] == 500:
         result = utils.loads(r_msg_body)
+        if "msg" in result:  # FIXME: old version support
+            result = result["msg"]
         if result['code'] == 500:
             return None
         else:

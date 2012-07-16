@@ -298,7 +298,6 @@ def subscription_get(context, subscription_id):
 
 
 def subscription_create(context, values):
-    print "subscription_create", values
     subscriptions = subscription_get_all(context, values)
     if subscriptions:
         raise Exception()
