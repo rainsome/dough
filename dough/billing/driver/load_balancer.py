@@ -60,15 +60,20 @@ print "connect load_balancer:", FLAGS.demux_host, FLAGS.demux_port
 DEMUX_CLIENT = Client(host=FLAGS.demux_host, port=FLAGS.demux_port)
 
 
-def is_running(load_balancer_uuid):
+def is_running(load_balancer_uuid, **kwargs):
     # TODO(lzyeval): handle error
     #load_balancers = DEMUX_CLIENT.send({'cmd': 'read_load_balancer_id_all',
     #                                    'msg': {'user_name': 'foo',
     #                                            'tenant': 'bar'}})
+    load_balancer = None
     tenant_id = None
     user_id = None
+    if "tenant_id" in kwargs:
+        tenant_id = kwargs['tenant_id']
+    if "user_id" in kwargs:
+        user_id = kwargs['user_id']
     load_balancer = DEMUX_CLIENT.send({'method': 'get_load_balancer',
-                                       'args': {'load_balancer_uuid': load_balancer_uuid,
+                                       'args': {'uuid': load_balancer_uuid,
                                                 'tenant_id': tenant_id,
                                                 'user_id': user_id}})
     print load_balancer_uuid, "load_balancer is_running:", load_balancer

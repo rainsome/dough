@@ -74,10 +74,11 @@ if __name__ == '__main__':
 
             action = getattr(api, status)
             try:
-                action(context, subscription_id, tenant_id, resource_uuid,
+                action(context, subscription_id, tenant_id, item_name, resource_uuid,
                    created_at, updated_at, expires_at, order_unit,
                    order_size, price, currency, region_name,
-                   item_name, interval_unit, interval_size, is_prepaid)
+                   interval_unit, interval_size, is_prepaid)
             except Exception, e:
                 print e, subscription_id, item_name
-        time.sleep(60 * 5)
+        print "<END>"
+        time.sleep(60 * 2)

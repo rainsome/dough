@@ -29,7 +29,7 @@ NOVA_CLIENT = client.Client(FLAGS.keystone_username,
                             service_type="compute")
 
 
-def is_running(floating_ip_uuid):
+def is_running(floating_ip_uuid, **kwargs):
     return not is_terminated(floating_ip_uuid)
 
 

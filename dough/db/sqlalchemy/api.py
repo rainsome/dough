@@ -345,6 +345,7 @@ def subscription_error(context, subscription_id):
 
 
 def subscription_extend(context, subscription_id, datetime_to):
+    print "[DB]", subscription_id, "extend to", datetime_to
     session = get_session()
     with session.begin():
         session.query(models.Subscription).\

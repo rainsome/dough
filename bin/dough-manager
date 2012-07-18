@@ -16,25 +16,19 @@
 #    WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
 #    License for the specific language governing permissions and limitations
 #    under the License.
-import datetime
 import sys
-import time
-import traceback
-
+import iso8601
 #from dateutil.relativedelta import relativedelta
 #import zmq
 
 from nova import flags
-from nova import log as logging
 from nova import utils
 
-#from dough import billing
-#    from dough.billing import api
 from dough import context as dough_context
 from dough import db
 from dough import api
 from nova.openstack.common import cfg
-#from dough import exception
+from dough.billing import driver
 
 utils.default_flagfile(filename='/etc/dough/dough.conf')
 FLAGS = flags.FLAGS
@@ -58,9 +52,11 @@ manager_opts = [
 FLAGS.register_cli_opts(manager_opts)
 flags.FLAGS(sys.argv)
 
-def show_usage():   
+
+def show_usage():
     print "dough-mansger -n <resource_name>"
-    
+
+
 def get_subs(context, param):
     print "filter: resource_name=", param
     try:
@@ -68,22 +64,23 @@ def get_subs(context, param):
         subscription_id = sub['id']
         status = sub['status']
         tenant_id = sub['project_id']
-        resource_uuid = sub['resource_uuid']
+        #resource_uuid = sub['resource_uuid']
         created_at = sub['created_at']
-        updated_at = sub['updated_at']
+        #updated_at = sub['updated_at']
         expires_at = sub['expires_at']
-        order_unit = sub['product']['order_unit']
-        order_size = sub['product']['order_size']
+        #order_unit = sub['product']['order_unit']
+        #order_size = sub['product']['order_size']
         price = sub['product']['price']
-        currency = sub['product']['currency']
+        #currency = sub['product']['currency']
 
         region_name = sub['product']['region']['name']
         item_name = sub['product']['item']['name']
-        pay_type = sub['product']['payment_type']
-        interval_unit = pay_type['interval_unit']
-        interval_size = pay_type['interval_size']
-        is_prepaid = pay_type['is_prepaid']
-        print '-'*60
+        #pay_type = sub['product']['payment_type']
+        #interval_unit = pay_type['interval_unit']
+        #interval_size = pay_type['interval_size']
+        #is_prepaid = pay_type['is_prepaid']
+        print '-' * 60
+        print "%24s : %s" % ("status", str(status))
         print "%24s : %s" % ("subscription_id", str(subscription_id))
         print "%24s : %s" % ("tenant_id", str(tenant_id))
         print "%24s : %s" % ("expires_at", str(expires_at))
@@ -95,11 +92,13 @@ def get_subs(context, param):
     except Exception, e:
         print Exception, e
 
+
 def query_report(tenant_id, timestamp_from, timestamp_to):
     datetime_from = iso8601.parse_date(timestamp_from)
     datetime_to = iso8601.parse_date(timestamp_to)
-    context = dough_context.get_context(tenant_id=self.tenant_id)
-    data = api.query_report(self.context,
+    print datetime_from, datetime_to
+    context = dough_context.get_context(tenant_id=tenant_id)
+    data = api.query_report(context,
                         timestamp_from,
                         timestamp_to)
     return data
@@ -108,6 +107,7 @@ def query_report(tenant_id, timestamp_from, timestamp_to):
 select id, subscription_id, created_at, quantity from purchases where subscription_id =151 and created_at>"2012-06-03 00:00:00";
 """
 
+
 def main():
     baselen = 2
     context = dough_context.get_admin_context()
@@ -115,10 +115,10 @@ def main():
         get_subs(context, sys.argv)
         return
     if len(sys.argv) == baselen:
-        if sys.argv[baselen-1] in ['--help', "-h", "?"]:
+        if sys.argv[baselen - 1] in ['--help', "-h", "?"]:
             show_usage()
             return
-            
+
     if len(sys.argv) == baselen + 2:
         param = sys.argv[baselen + 1]
         if sys.argv[baselen][:2] == '-r':
@@ -128,7 +128,7 @@ def main():
         timestamp_from = sys.argv[baselen + 2]
         timestamp_to = sys.argv[baselen + 3]
         print query_report(tenant_id, timestamp_from, timestamp_to)
-    
-    
+
+
 if __name__ == '__main__':
     main()

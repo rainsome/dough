@@ -69,7 +69,7 @@ class Client():
 KANYUN_CLIENT = Client(host=FLAGS.kanyun_host, port=FLAGS.kanyun_port)
 
 
-def is_running(instance_uuid):
+def is_running(instance_uuid, **kwargs):
     try:
         instance = NOVA_CLIENT.servers.get(instance_uuid)
     except Exception:
