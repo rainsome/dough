@@ -29,7 +29,7 @@ NOVA_CLIENT = client.Client(FLAGS.keystone_username,
                             service_type="compute")
 
 
-def is_running(instance_uuid):
+def is_running(instance_uuid, **kwargs):
     try:
         instance = NOVA_CLIENT.servers.get(instance_uuid)
     except Exception:
