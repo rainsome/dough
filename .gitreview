@@ -1,0 +1,4 @@
+[gerrit]
+host=10.210.228.21
+port=29418
+project=dough.git
