@@ -1,0 +1,5 @@
+/var/log/dough/*.log{
+rotate 15
+
+
+}
