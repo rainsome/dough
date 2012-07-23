@@ -16,7 +16,6 @@ set -e
 
 case "$1" in
     install|upgrade)
-            adduser --system dough
     ;;
 
     abort-upgrade)
