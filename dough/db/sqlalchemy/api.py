@@ -18,16 +18,14 @@
 
 """Implementation of SQLAlchemy backend."""
 
-import datetime
-
-from sqlalchemy import and_
-from sqlalchemy import or_
-from sqlalchemy.exc import IntegrityError
-from sqlalchemy.orm import joinedload
-from sqlalchemy.orm import joinedload_all
-from sqlalchemy.sql import func
-from sqlalchemy.sql.expression import asc
-from sqlalchemy.sql.expression import desc
+#from sqlalchemy import and_
+#from sqlalchemy import or_
+#from sqlalchemy.exc import IntegrityError
+#from sqlalchemy.orm import joinedload
+#from sqlalchemy.orm import joinedload_all
+#from sqlalchemy.sql import func
+#from sqlalchemy.sql.expression import asc
+#from sqlalchemy.sql.expression import desc
 from sqlalchemy.sql.expression import literal_column
 
 from nova import utils
@@ -241,6 +239,15 @@ def payment_type_get_by_name(context, payment_type_name):
 
 # products
 
+def subscription_get_byname(context, resource_name):
+    result = model_query(context, models.Subscription).\
+                     filter_by(resource_name=resource_name).\
+                     first()
+    if not result:
+        return None
+    return result
+
+
 def product_get(context, product_id):
     result = model_query(context, models.Product).\
                      filter_by(id=product_id).\
@@ -279,8 +286,8 @@ def product_get_all(context, filters=None):
                           filters.items()))
     return model_query(context, models.Product).filter_by(**filters).all()
 
-# subscriptions
 
+# subscriptions
 def subscription_get(context, subscription_id):
     result = model_query(context, models.Subscription).\
                      filter_by(id=subscription_id).\
@@ -338,6 +345,7 @@ def subscription_error(context, subscription_id):
 
 
 def subscription_extend(context, subscription_id, datetime_to):
+    print "[DB]", subscription_id, "extend to", datetime_to
     session = get_session()
     with session.begin():
         session.query(models.Subscription).\
@@ -352,9 +360,11 @@ def subscription_get_all_by_resource_uuid(context, resource_uuid):
 
 
 def subscription_get_all(context, filters=None):
+    """filters={project_id:1}"""
     filters = filters or dict()
     filters = dict(filter(lambda (x, y): x in ['project_id',
                                                'product_id',
+                                               'status',
                                                'resource_uuid'],
                           filters.items()))
     return model_query(context, models.Subscription).filter_by(**filters).all()

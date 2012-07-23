@@ -1,17 +1,23 @@
+[dough-api]
+log: /var/log/dough-api.log
+
+[farmer]
+log: /var/log/dough-farmer.log
+
 [DEFAULT]
 sql_connection=mysql://someuser:somepasswd@localhost/dough
 api_listen=localhost
-api_listen_port=5557
+api_listen_port=5554
 farmer_listen=localhost
-farmer_listen_port=5558
+farmer_listen_port=5553
 keystone_username=someusername
 keystone_password=somepassword
 keystone_tenant_name=sometenant
 keystone_auth_url=someurl
 demux_host=localhost
-demux_port=5559
+demux_port=5556
 kanyun_host=localhost
-kanyun_port=5560
+kanyun_port=5552
 mysql_host=localhost
 mysql_port=3306
 mysql_user=nova
