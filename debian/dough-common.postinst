@@ -1,0 +1,11 @@
+#!/bin/sh -e
+
+if [ "$1" = "configure" ]; then
+    if ! getent group dough> /dev/null 2>&1; then
+        addgroup --system dough>/dev/null
+    fi
+    if ! getent passwd dough> /dev/null 2>&1; then
+        adduser --system --home /var/lib/dough --ingroup dough --no-create-home --shell /bin/false dough 
+    fi
+mkdir -p /var/log/dough
+chown -R dough:dough /var/log/dough /etc/dough/
