@@ -20,12 +20,14 @@
 
 from nova import context as nova_context
 
+
 def get_admin_context(read_deleted="no"):
     return nova_context.RequestContext(user_id=None,
                                        project_id=None,
                                        is_admin=True,
                                        read_deleted=read_deleted,
                                        overwrite=False)
+
 
 def get_context(tenant_id=None, **kwargs):
     return nova_context.RequestContext(user_id=None,

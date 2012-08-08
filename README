@@ -1,0 +1,397 @@
+Overview
+===========================
+
+dough是一个openstack的计费系统。它可以：
+    对租户进行持续的计费
+    拥有灵活可定制的付款方式
+    可按照价格和周期进行付款单位设定
+    设定预付费或者即时付费
+    扣除租户费用
+    代金券管理
+
+====== Database Schema ======
+
+
+# 地区
+CREATE TABLE `regions` (
+  `created_at` datetime DEFAULT NULL,
+  `updated_at` datetime DEFAULT NULL,
+  `deleted_at` datetime DEFAULT NULL,
+  `deleted` tinyint(1) DEFAULT NULL,
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `name` varchar(255) NOT NULL,
+  PRIMARY KEY (`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+
+# 扣费项目表
+CREATE TABLE `items` (
+  `created_at` datetime DEFAULT NULL,
+  `updated_at` datetime DEFAULT NULL,
+  `deleted_at` datetime DEFAULT NULL,
+  `deleted` tinyint(1) DEFAULT NULL,
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `name` varchar(255) NOT NULL,
+  PRIMARY KEY (`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+
+# 虚拟机类型
+CREATE TABLE `item_types` (
+  `created_at` datetime DEFAULT NULL,
+  `updated_at` datetime DEFAULT NULL,
+  `deleted_at` datetime DEFAULT NULL,
+  `deleted` tinyint(1) DEFAULT NULL,
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `name` varchar(255) NOT NULL,
+  PRIMARY KEY (`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+
+# 计费周期类型
+# is_prepaid是预付费还是后付费
+# interval_*是计费的周期
+CREATE TABLE `payment_types` (
+  `created_at` datetime DEFAULT NULL,
+  `updated_at` datetime DEFAULT NULL,
+  `deleted_at` datetime DEFAULT NULL,
+  `deleted` tinyint(1) DEFAULT NULL,
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `name` varchar(255) NOT NULL,
+  `interval_unit` varchar(255) NOT NULL,
+  `interval_size` int(11) NOT NULL,
+  `is_prepaid` tinyint(1) NOT NULL,
+  PRIMARY KEY (`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+
+# 产品表
+# order_*是费用单位, payment_types.interval*不能大于products.order*
+# 目前payment_types.interval_* 和 products.order* 的时间周期必须全部一样
+# 举例：
+# payment_types.interval_*= 1 day , products.order*= 1 month, 则
+# 举例：
+# payment_types.interval_*= 1 hour , products.order*= 10Mb Bytes, 则一个小时之后产生一条 
+#           purchases.quantity/products.order_size*products.price
+# 的费用记录
+# currency是货币单位，暂时没用
+CREATE TABLE `products` (
+  `created_at` datetime DEFAULT NULL,
+  `updated_at` datetime DEFAULT NULL,
+  `deleted_at` datetime DEFAULT NULL,
+  `deleted` tinyint(1) DEFAULT NULL,
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `region_id` int(11) NOT NULL,
+  `item_id` int(11) NOT NULL,
+  `item_type_id` int(11) NOT NULL,
+  `payment_type_id` int(11) NOT NULL,
+  `order_unit` varchar(255) NOT NULL,  # e.g) hours / days / months / KBytes / requests
+  `order_size` int(11) NOT NULL,
+  `price` float NOT NULL,
+  `currency` varchar(255) NOT NULL,
+  PRIMARY KEY (`id`),
+  KEY `region_id` (`region_id`),
+  KEY `item_id` (`item_id`),
+  KEY `item_type_id` (`item_type_id`),
+  KEY `payment_type_id` (`payment_type_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+
+# 订单表
+# 创建resource如虚拟机的时候会生成一条记录
+# project_id是用户的tenant_id
+# resource_uuid 虚拟机的uuid或者loadblance的uuid等
+# resource_name是用户起的名字
+# expires_at是下一个计费的时间
+# status是状态，对应内部的处理函数名称
+# 资源被回收如虚拟机关闭、floatingip取消的时候会删除对应的subscriptions记录（仅标记deleted字段，不实际删除）
+CREATE TABLE `subscriptions` (
+  `created_at` datetime DEFAULT NULL,
+  `updated_at` datetime DEFAULT NULL,
+  `deleted_at` datetime DEFAULT NULL,
+  `deleted` tinyint(1) DEFAULT NULL,
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `project_id` varchar(64) NOT NULL,
+  `product_id` int(11) NOT NULL,
+  `resource_uuid` varchar(36) NOT NULL,
+  `resource_name` varchar(255) NOT NULL,
+  `expires_at` datetime DEFAULT NULL,
+  `status` varchar(255) DEFAULT NULL,  # comfirmed, creating, deleting
+  PRIMARY KEY (`id`),
+  KEY `project_id` (`project_id`),
+  KEY `product_id` (`product_id`),
+  KEY `resource_uuid` (`resource_uuid`),
+  KEY `expires_at` (`expires_at`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+
+# 扣费记录表
+# 在每个收费点上都会生成一条记录
+# 预付费的subscriptions会在creating改变为verify的时候生成一条记录
+# 后付费的subscriptions会在从deleting变为terminated的时候生成一条记录
+# 所有verify的subscriptions的expires_at大于当前时间就会生成一条记录
+# quantity是当前计费周期内的数据量（流量单位目前为byte，floatingip等为天）
+# line_total是本次费用
+# 已经实际扣过费的记录，flag字段为1。未扣费的为0；扣费失败的为-1
+CREATE TABLE `purchases` (
+  `created_at` datetime DEFAULT NULL,
+  `updated_at` datetime DEFAULT NULL,
+  `deleted_at` datetime DEFAULT NULL,
+  `deleted` tinyint(1) DEFAULT NULL,
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `subscription_id` int(11) NOT NULL,
+  `quantity` float NOT NULL,
+  `line_total` float NOT NULL,
+  `flag` tinyint(4) DEFAULT '0',
+  PRIMARY KEY (`id`),
+  KEY `subscription_id` (`subscription_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+
+
+====== Communication Protocol ======
+
+
+msg_type = 'dough'
+msg_uuid = utils.gen_uuid()
+
+
+===== Protocol =====
+
+==== horizon -> billing_server ====
+
+# ``payment_type`` is str, eg. hourly for hour, daily for day and monthly for month
+# ``resource_uuid`` contains ``instance_uuid`` for instance, ``floating_ip_id``, ``load_balancer_id`` for floating_ip_id, load_balancer_id
+# ``item_type`` is flavor for instance, 'default' for floating_ip_id, load_balancer_id
+
+# 'subscribe_item'
+message = {
+    'method': 'subscribe_item',
+    'args': {
+        'user_id': '864bbc5d23ea47799ae2a702927920e9',
+        'tenant_id': '864bbc5d23ea47799ae2a702927920e9',
+        'region': 'deafult',                        # always 'default' for now
+        'item': 'instance',                         # 'floating_ip','load_balancer'
+        'item_type': 'm1.tiny',                     # 'default' for floating_ip / load_balance
+        'payment_type': 'hourly',
+        'resource_uuid': 'uuidofinstance',          # 'xxx-id' value for floating_ip / load_balancer
+        'resource_name': 'nameofinstance',          # 'display name' value for instance / floating_ip / load_balancer
+        }
+    }
+
+# 'unsubscribe_item'
+message = {
+    'method': 'unsubscribe_item',
+    'args': {
+        'user_id': '864bbc5d23ea47799ae2a702927920e9',
+        'tenant_id': '864bbc5d23ea47799ae2a702927920e9',
+        'region': 'deafult',                        # always 'default' for now
+        'item': 'instance',                         # 'floating_ip','load_balancer'
+        'resource_uuid': 'uuidofinstance',          # 'id' value for floating_ip / load_balancer
+        }
+    }
+
+# 'query_item_products'
+message = {
+    'method': 'query_item_products',
+    'args': {
+        'region': 'deafult',     # always 'default' for now
+        'item': 'instance',      # 'floating_ip','load_balancer'
+        }
+    }
+
+# 'query_usage_report'
+message = {
+    'method': 'query_usage_report',
+    'args': {
+        'user_id': '864bbc5d23ea47799ae2a702927920e9',
+        'tenant_id': '864bbc5d23ea47799ae2a702927920e9',
+        'timestamp_from': '2012-03-06T11:05:54.747585',
+        'timestamp_to': '2012-03-26T11:05:54.747585',
+        }
+    }
+
+# 'query_monthly_report'
+message = {
+    'method': 'query_monthly_report',
+    'args': {
+        'user_id': '864bbc5d23ea47799ae2a702927920e9',
+        'tenant_id': '864bbc5d23ea47799ae2a702927920e9',
+        'timestamp_from': '2012-03-01T00:00:00',
+        'timestamp_to': '2012-05-01T00:00:00',
+        }
+    }
+
+#query_detail_report
+message = {
+    'method' : 'query_detail_report'
+    'args' : {
+            'user_id': '864bbc5d23ea47799ae2a702927920e9',
+            'tenant_id': '864bbc5d23ea47799ae2a702927920e9',
+            'timestamp_from': '2012-03-01T00:00:00',
+            'timestamp_to': '2012-05-01T00:00:00',
+        }
+    }
+
+# 'query_report'
+查询指定时间间隔的统计结果明细
+period取值：days / hours / months
+item_nam取值(dough.items表name字段的内容)：instance / network / floating_ip / load_balancer / cdn_network
+message = {
+    'method': 'query_report',
+    'args': {
+        'user_id': '864bbc5d23ea47799ae2a702927920e9',
+        'tenant_id': '864bbc5d23ea47799ae2a702927920e9',
+        'timestamp_from': '2012-03-01T00:00:00',
+        'timestamp_to': '2012-03-02T00:00:00',
+        'period': 'days',
+        'item_name': 'instance'
+        'resource_name': 'myvm'
+        }
+    }
+
+
+==== billing_server -> horizon ====
+
+# 'subscribe_item', 'unsubscribe_item'
+message = {
+    'message':'message_string',
+    'code':200 # or 500,
+    }
+
+# 'query_item_products'
+message = {
+    'message':'message_string',
+    'code': 200, # or 500
+    'data': {
+        'default': {
+            'daily_as_you_go': {
+                'order_unit': 'Bytes',
+                'order_size': 10240,
+                'price': 0.0091,
+                'currency': 'CNY',
+                },
+            },
+        'm1.large': {
+            'hourly': {
+                'order_unit': 'hours',
+                'order_size': 1,
+                'price': 0.5,
+                'currency': 'CNY',
+                },
+            'monthly': {
+                'order_unit': 'months',
+                'order_size': 1,
+                'price': 300,
+                'currency': 'CNY',
+                },
+            },
+        },
+    }
+
+# 'query_usage_report'
+message = {
+    'message':'message_string',
+    'code':200, # or 500
+    'data': {
+        'default': {
+            'instance': [
+                #  (resource_uuid, resource_name, item_type, order_unit, order_size, price, currency, quantity_sum, line_total_sum ,timestamp_from, timestamp_to)
+                ('uuid1', 'some instance', 'm1.tiny', 'hours', 1, 2.40, 'CNY', 16, 38.4, '2012-03-06T11:05:54.747585', '2012-03-26T11:05:54.747585',),
+                ('uuid1', 'some instance2', 'm1.tiny', 'months', 1, 2100.00, 'CNY', 1, 2100.00, '2012-03-06T11:05:54.747585', '2012-03-26T11:05:54.747585',),
+                ],
+            'load_balancer': [
+                ('1111', '10.211.23.45', 'default', 'days', 1, 1.1, 'CNY', 19, 20.9, '2012-03-06T11:05:54.747585', '2012-03-26T11:05:54.747585',),
+                ('222', '170.1.223.5', 'default', 'days', 1, 1.1, 'CNY', 11, 12.1, '2012-03-06T11:05:54.747585', '2012-03-26T11:05:54.747585',),
+                ],
+            'floating_ip': [
+                ('lb_id1', 'some load balancer', 'default', 'days', 1, 2.7, 'CNY', 13, 35.1, '2012-03-06T11:05:54.747585', '2012-03-26T11:05:54.747585',),
+                ('lb_id2', 'some load balancer2', 'default', 'days', 1, 2.7, 'CNY', 27, 73.9, '2012-03-06T11:05:54.747585', '2012-03-26T11:05:54.747585',),
+                ],
+            'network': [ # ``uuid``, ``timestamp_from``,``timestamp_to`` and ``resource_name`` are the same with that of instance 
+                ('uuid1', 'some instance', 'default', 'KBytes', 1, 0.7, 'CNY', 1852, 1296.4, '2012-03-06T11:05:54.747585', '2012-03-26T11:05:54.747585',),
+                ('uuid2', 'some instance2', 'default', 'KBytes', 1, 0.7, 'CNY', 9853, 6897.1, '2012-03-06T11:05:54.747585', '2012-03-26T11:05:54.747585',),
+                ],
+            },
+        },
+    }
+
+# 'query_monthly_report'
+message = {
+    'message':'message_string',
+    'code':200, # or 500
+    'data': {
+        'default': {
+            '2012-03-01T00:00:00': {
+                'instance': 12345.67,
+                'floating_ip': 12345.67,
+                'load_balancer': 12345.67,
+                'network': 12345.67,
+                },
+            '2012-04-01T00:00:00': {
+                'instance': 12345.67,
+                'floating_ip': 12345.67,
+                'load_balancer': 12345.67,
+                'network': 12345.67,
+                },
+            },
+        },
+    }
+
+#'query_detail_report'
+message = {
+    'message':'message_string',
+    'code':200, # or 500,
+    'date':{
+        {u'default':
+             {
+                  '2012-06-12T00:00:00+00:00:00':{
+                     total_cost:246
+                     sourse_type:'instance'
+                     sourse_name:'my instance'
+                     time_from:'2012-06-12T00:00:00+00:00:00'
+                     time_to:'2012-06-13T00:00:00+00:00:00'
+                     coupon_cost:123
+                     coupon_remain:123
+                     money_cost:123
+                     money_remain:123
+                  }
+             },
+             ...
+        }
+    }
+}
+
+# 'query_report'
+message = {
+    'message':'message_string',
+    'code':200, # or 500
+    'data': {
+        {u'default': 
+             {
+             '2012-06-12T00:00:00+00:00': {
+             'line_total': 2.0, 
+             'quantity': 1.0,
+             'floating_ip': (u'276', u'119.167.136.72', u'default', u'days', 1L, 2.0, u'CNY', 1.0, 2.0, '2012-06-12T01:19:18', '2012-06-16T01:19:18')
+             }
+        },
+    }
+
+
+====== Use Case ======
+
+===== 用户开始使用收费条目 =====
+
+当用户开始使用收费服务以及停止收费服务，通知billing server。这里的收费服务指的是
+  - 创建/停止 虚拟机
+  - 分配/释放 IP地址
+  - 创建/删除 负载均衡
+
+创建收费服务时，horizon确认用户的账户是否余额足够，如果足够则创建服务并且通知billing server。
+
+用户取消服务时，horizon通知billing server。
+
+
+===== Billing Server 健康检查===== 
+Billing Server通过nova api或者nova 数据库对收费条目进行检查，防止创建不成功但是依然扣费的情况出现。如果有创建失败的问题出现，那么Billing Server通知管理员(Administrator）并且停止扣费。
+
+
+===== Billing Server 扣费 =====
+Billing Server周期性（每个小时）在用户的账号上，根据账单进行扣费。
+
+
+===== Billing Server与SSO交互 =====
+Billing Server通过SSO读写用户的余额信息。

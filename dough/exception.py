@@ -26,6 +26,7 @@ SHOULD include dedicated exception logging.
 
 from nova import exception
 
+
 class RegionNotFound(exception.NotFound):
     message = _("Region %(region_id)s could not be found.")
 

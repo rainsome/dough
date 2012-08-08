@@ -106,7 +106,8 @@ def verified(context, subscription_id, tenant_id, item_name, resource_uuid,
                               expires_at, order_size)
     print "verified", tenant_id, subscription_id, \
                     quantity, order_size, "\033[1;33m", price, "\033[0m"
-    app.info("verified %s:subid=%s,tid=%s,price=%s" % (item_name, subscription_id, tenant_id, str(price)))
+    app.info("verified %s(%s/%s/%s)" \
+             % (subscription_id, item_name, str(price), str(expires_at)))
     charge(context, tenant_id, subscription_id, quantity, order_size, price)
     db.subscription_extend(context, subscription_id,
                            expires_at + relativedelta(**interval_info))

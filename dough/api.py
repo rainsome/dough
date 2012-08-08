@@ -260,7 +260,6 @@ def query_report(context, timestamp_from=None, timestamp_to=None,
                   period=None, item_name=None, resource_name=None, **kwargs):
     """period='days' or 'hours'"""
     print "query_report", timestamp_from, timestamp_to, item_name, resource_name
-#    period = int(period)
 
     if not period in ['days', 'hours', 'months']:
         return {'data': None}
@@ -280,7 +279,6 @@ def query_report(context, timestamp_from=None, timestamp_to=None,
         return current_frame.isoformat()
 
     monthly_report = dict()
-    #usage_report = dict()
     datetime_from = iso8601.parse_date(timestamp_from)
     datetime_to = iso8601.parse_date(timestamp_to)
     subscriptions = list()
@@ -290,9 +288,7 @@ def query_report(context, timestamp_from=None, timestamp_to=None,
                                                         context.project_id)
     if not __subscriptions:
         return {'data': None}
-#    print "context.project_id", context.project_id
     for subscription in __subscriptions:
-#        print subscription['id'], subscription['resource_name'], subscription['product']['item']['name']
         if subscription['resource_name'] != resource_name:
             continue
         elif subscription['product']['item']['name'] != item_name:

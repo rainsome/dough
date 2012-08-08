@@ -46,6 +46,10 @@ if __name__ == '__main__':
             expires_at = sub['expires_at']
             if expires_at > current_time:
                 continue
+            product = sub['product']
+            if product is None:
+                app.warning("product is None, subid=" + str(sub.id))
+                continue
 
             order_unit = sub['product']['order_unit']
             order_size = sub['product']['order_size']
