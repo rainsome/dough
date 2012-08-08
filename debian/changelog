@@ -1,0 +1,5 @@
+dough (0.1.1-1) unstable; urgency=low
+
+  * Initial release (Closes: #nnnn)  <nnnn is the bug number of your ITP>
+
+ -- Tang Yaguang <yaguang@staff.sina.com.cn>  Mon, 23 Jul 2012 15:44:27 +0800

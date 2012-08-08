@@ -1,0 +1,20 @@
+description "dough billing worker service"
+author "yaguang <yaguang@staff.sina.com.cn>"
+
+start on (filesystem and net-device-up IFACE!=lo)
+stop on runlevel [016]
+
+respawn
+
+chdir /var/run
+
+pre-start script
+	mkdir -p /var/run/dough
+	chown dough:root /var/run/dough/
+
+	mkdir -p /var/lock/dough
+	chown dough:root /var/lock/dough/
+
+end script
+
+exec su -s /bin/sh -c "exec dough-farmer" dough

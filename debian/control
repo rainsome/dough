@@ -1,0 +1,27 @@
+Source: dough
+Section: net
+Priority: extra
+Maintainer: Tang Yaguang <yaguang@staff.sina.com.cn>
+Build-Depends: debhelper (>= 8.0.0)
+Standards-Version: 3.9.2
+Homepage: https://git.sws.sina.com.cn/dough
+#Vcs-Git: git://git.debian.org/collab-maint/dough.git
+#Vcs-Browser: http://git.debian.org/?p=collab-maint/dough.git;a=summary
+
+Package: dough-common
+Architecture: all
+Depends: libzmq1,python-zmq
+Description: dough common lib
+ sina sws dough billing system toolset
+
+Package: dough-api
+Architecture: all
+Depends: dough-common
+Description: dough api
+ sina sws dough-api
+
+Package: dough-farmer
+Architecture: all
+Depends: dough-common
+Description: dough farmer
+ sina sws dough-farmer.

@@ -12,7 +12,7 @@ if sys.version_info < (2, 7):
 
 setup(
     name = "dough",
-    version = "0.1",
+    version = "0.1.1",
     description = "OpenStack Billing System",
     long_description = "OpenStack Billing System",
     url = 'https://github.com/lzyeval/dough',
@@ -27,8 +27,11 @@ setup(
         'Intended Audience :: Information Technology',
         'License :: OSI Approved :: Apache Software License',
         'Operating System :: OS Independent',
-        'Programming Language :: Python',
-    ],
+        'Programming Language :: Python',],
+    scripts=['bin/dough-api',
+             'bin/dough-farmer',
+             'bin/dough-manager',
+             'bin/dough-client',],
     install_requires = requirements
 )
 """
